@@ -49,7 +49,7 @@ def shift8h():
     shift = np.zeros((7, off_days_8h), dtype=int)
     twodaysoff = np.sort(np.random.choice(range(7), off_days_8h, replace=False)) # random 2 dif number
     # twodaysoff=[0,3] # twodaysoff=[1,6] # wodaysoff=[0,1] # twodaysoff=[1,2]
-    print("twodaysoff:", twodaysoff)
+    # print("twodaysoff:", twodaysoff)
     work_days = np.setdiff1d(days, twodaysoff) # 5 work days
 
     for i in work_days:
@@ -65,7 +65,7 @@ def shift8h():
                 shift[i] = (starttime1, endtime)
                 # add
                 if starttime1 - shift[i - 1][1] < 12:  # 12 hours break btw work days
-                    print('yes')
+                    # print('yes')
                     # shift[i-1][0]=np.random.randint(0,starttime1-12) +i*24
                     shift[i - 1][0] = np.random.randint(0, 10) + i * 24
                     # print(shift[i-1][0])
@@ -92,17 +92,17 @@ def modify_shift8h():
     #     a[i-1]=[0,0]
     # print("new:",a)
 #----------
-a=modify_shift8h()
+# a=modify_shift8h()
 b=modify_shift8h()
-c=modify_shift8h()
-d=modify_shift8h()
-
-e=modify_shift8h()
-f=modify_shift8h()
-g=modify_shift8h()
-h=modify_shift8h()
-gen1=(a,b,c,d)
-gen2=(e,f,g,h)
+# c=modify_shift8h()
+# d=modify_shift8h()
+#
+# e=modify_shift8h()
+# f=modify_shift8h()
+# g=modify_shift8h()
+# h=modify_shift8h()
+# gen1=(a,b,c,d)
+# gen2=(e,f,g,h)
 # array([[  0,   0],
 #        [ 45,  53],
 #        [ 62,  70],
@@ -128,7 +128,7 @@ integer2binaryShift(b)
 # b=popuInteger[0][j,:]
 
 
-numWorkers = 3 #10
+numWorkers = 4 #10
 #Generation of random population, complying with worker restrictions
 popuInteger = np.zeros((popuSize,numWorkers,7,2),dtype=np.int)
 popuBinary = np.zeros((popuSize,numWorkers,LastShiftEndTime),dtype=np.int)
@@ -160,12 +160,13 @@ for i in range(0,popuSize):
  # return for each worker in the popusize
 def shift2demand(genInteger):
     genBinary = np.zeros([numWorkers,LastShiftEndTime],dtype=np.int)
-    genBinary_sum = np.zeros(LastShiftEndTime, dtype=np.int)
+    # genBinary_sum = np.zeros(LastShiftEndTime, dtype=np.int)
     for i in range(numWorkers): #numwWorkers-1
         genBinary[i] = integer2binaryShift(genInteger[i])
+        # print(genBinary[i])
     genBinary_sum=sum(genBinary, 0) #* hourly_staff_handle#20
-    return genBinary_sum
 
+    return genBinary_sum
 
 shift2demand(popuInteger[0])
 
@@ -178,42 +179,38 @@ shift2demand(popuInteger[0])
 demand_flat = demand.flatten()
 demand_overweek = np.append(demand_flat,demand_flat[0:8])
 demand_require_workers=np.ceil(demand_overweek/hourly_staff_handle)
-
-####
-
-
-max_under_coverage= np.sum(np.maximum(demand_require_workers,
-                                      demand_require_workers-numWorkers))
-
-under_cover= demand_require_workers - numWorkers
-
-xxx=popuInteger[0][0] #shuai
-xxx
-shift2demand(xxx)
+# max_under_coverage= np.sum(np.maximum(demand_require_workers,
+#                                       demand_require_workers-numWorkers))
+num_undercover= demand_require_workers - numWorkers
 
 def computeFitness(genInteger):
     # shift_hourly_capability=shift2demand(genInteger)* hourly_staff_handle
+    num_undercover = demand_require_workers - shift2demand(genInteger)
     cost_worker_week = np.sum(cost_fulltime * shift2demand(genInteger))
-    sum_under_cover = np.sum(under_cover[under_cover>0])
+
+    sum_under_cover = np.sum(num_undercover[num_undercover>0])
     under_cover_penalty = under_cover_cost * sum_under_cover
+
     total_cost = cost_worker_week + under_cover_penalty
     return total_cost
 
-computeFitness(genInteger)
 
-genError = float(np.sum(abs(getGenWorkersHalfHours(genInteger) -
-                            workersHalfHours))) / float(maxError)
+computeFitness(popuInteger[0])
+#
+# genError = float(np.sum(abs(getGenWorkersHalfHours(genInteger) -
+#                             workersHalfHours))) / float(maxError)
+#
+
+
 
 
 #----  set up a middle point and crossover/swap, more methods see literature
 
 def crossover(gen1,gen2): # one gen is the all shifts for all the workers
     pointOfCross = np.random.randint(1,numWorkers-2)
+    print(pointOfCross)
     return(np.concatenate((gen1[0:pointOfCross,:],gen2[pointOfCross:numWorkers,:])),
            np.concatenate((gen2[0:pointOfCross,:],gen1[pointOfCross:numWorkers,:])))
 
-crossover(gen1,gen2)
-
-
-
+crossover(popuInteger[0],popuInteger[1])
 
