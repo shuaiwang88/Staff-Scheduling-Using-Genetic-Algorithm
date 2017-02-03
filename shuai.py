@@ -214,3 +214,35 @@ def crossover(gen1,gen2): # one gen is the all shifts for all the workers
 
 crossover(popuInteger[0],popuInteger[1])
 
+
+#
+
+def mutation(gen):
+    mutationIdx = np.random.permutation(numWorkers)
+    mutationIdx = mutationIdx[0:mutaSize]
+    print(mutationIdx)
+    for i in mutationIdx:
+        gen[i,:] = modify_shift8h()
+    return gen
+
+mutation(popuInteger[0])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
