@@ -252,21 +252,21 @@ while it < maxIt:
 
 
     for k in range(0, numCrossPairs - 1):
-        selected1 = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        selected1 = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
         # array([False, False, False, False, False,  True,  True,  True,  True,  True], dtype=bool)
         # selected1=5
         # choose a random number from 0..1 and times the sum of the fitness
         # the index of the first Ture
 
-        selected2 = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
-
+        selected2 = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+˚
         cross = crossover(popuInteger[selected1, :, :], popuInteger[selected2, :, :])
         auxPopuInteger[numElitism + 2 * k, :, :] = cross[0]
         auxPopuInteger[numElitism + 2 * k + 1, :, :] = cross[1]
         # this updates the auxPopuInteger every two do an append
 
     for k in range(0, numNoCrossGenes - 1):
-        selected = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        selected = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
         auxPopuInteger[numElitism + 2 * numCrossPairs + k, :, :] = popuInteger[selected, :, :]
             # again append more solution to the pool.
 
