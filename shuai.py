@@ -41,7 +41,7 @@ probCross = 0.8 #0.8
 mutaSize = 2
 probMutation = 0.1
 numElitism = 20 #20    2    4
-maxIt = 300 #300
+maxIt = 1000 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 def shift8h():
@@ -193,7 +193,7 @@ def computeFitness(genInteger):
     return total_cost
 
 
-computeFitness(popuInteger[0])
+computeFitness(popuInteger[0,:,:])
 #
 # genError = float(np.sum(abs(getGenWorkersHalfHours(genInteger) -
 #                             workersHalfHours))) / float(maxError)
@@ -241,9 +241,10 @@ minPopuFitness = np.zeros([maxIt],)
 #
 while it < maxIt:
     sortedIndexPopuFitness = np.argsort(popuFitness)
-    best_index_numElitism = popuSize - numElitism + 1
-    auxPopuInteger[0:numElitism - 1, :, :] = \
-    popuInteger[sortedIndexPopuFitness[best_index_numElitism:], :, :]
+    # best_index_numElitism = popuSize - numElitism + 1 # shuai this is best # max value
+    # auxPopuInteger[0:numElitism - 1, :, :] = popuInteger[sortedIndexPopuFitness[best_index_numElitism:], :, :]
+    best_index_numElitism = numElitism-1 #+1
+    auxPopuInteger[0:numElitism - 1, :, :] = popuInteger[sortedIndexPopuFitness[0:best_index_numElitism], :, :]
 
 
     numCrossPairs = np.random.binomial((popuSize-numElitism)/2,probCross)
@@ -252,13 +253,15 @@ while it < maxIt:
 
 
     for k in range(0, numCrossPairs - 1):
-        selected1 = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        selected1 = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+
+
         # array([False, False, False, False, False,  True,  True,  True,  True,  True], dtype=bool)
         # selected1=5
         # choose a random number from 0..1 and times the sum of the fitness
         # the index of the first Ture
 
-        selected2 = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        selected2 = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
 
         cross = crossover(popuInteger[selected1, :, :], popuInteger[selected2, :, :])
         auxPopuInteger[numElitism + 2 * k, :, :] = cross[0]
@@ -266,7 +269,7 @@ while it < maxIt:
         # this updates the auxPopuInteger every two do an append
 
     for k in range(0, numNoCrossGenes - 1):
-        selected = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        selected = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
         auxPopuInteger[numElitism + 2 * numCrossPairs + k, :, :] = popuInteger[selected, :, :]
             # again append more solution to the pool.
 
@@ -287,15 +290,16 @@ while it < maxIt:
     cumulativeFitness = np.cumsum(popuFitness)
     bestSolInd = np.argmin(popuFitness)
     minPopuFitness[it] = popuFitness[bestSolInd]
+    # print(minPopuFitness)
     print (minPopuFitness[it]) # shuai
     # print it #shuai 2
-    print(it)
+    # print(it)
     it = it+1
 
 
 
 bestSolution = popuInteger[bestSolInd,:,:]
-genWorkersHalfHours = shift2demand(popuInteger[bestSolInd,:,:])
-print (minPopuFitness[it-1])
+solution = shift2demand(popuInteger[bestSolInd,:,:])
+print (minPopuFitness[it])
 t1 = time()
 print ('time',t1-t)
