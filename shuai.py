@@ -26,7 +26,7 @@ off_days_8h=2
 # hour_size=24*7
 
 #shift
-numWorkers = 4 #10
+numWorkers = 10 #10
 cost_fulltime= 20 #
 #demand of workers
 demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
@@ -36,12 +36,11 @@ under_cover_cost=40
 
 
 # Genetic algorithm parameters
-popuSize = 3 # 200   5   10
+popuSize = 200# 200   5   10
 probCross = 0.8 #0.8
 mutaSize = 2
 probMutation = 0.1
 numElitism = 20 #20    2    4
-probFullTime = 0.5
 maxIt = 300 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
@@ -128,11 +127,10 @@ integer2binaryShift(b)
 # b=popuInteger[0][j,:]
 
 
-numWorkers = 4 #10
 #Generation of random population, complying with worker restrictions
 popuInteger = np.zeros((popuSize,numWorkers,7,2),dtype=np.int)
 popuBinary = np.zeros((popuSize,numWorkers,LastShiftEndTime),dtype=np.int)
-
+auxPopuInteger = popuInteger
 for i in range(0,popuSize):
     for j in range(0,numWorkers):
             popuInteger[i, j, :] = modify_shift8h()
@@ -208,41 +206,96 @@ computeFitness(popuInteger[0])
 
 def crossover(gen1,gen2): # one gen is the all shifts for all the workers
     pointOfCross = np.random.randint(1,numWorkers-2)
-    print(pointOfCross)
+    # print(pointOfCross)
     return(np.concatenate((gen1[0:pointOfCross,:],gen2[pointOfCross:numWorkers,:])),
            np.concatenate((gen2[0:pointOfCross,:],gen1[pointOfCross:numWorkers,:])))
 
 crossover(popuInteger[0],popuInteger[1])
 
 
-#
-
+#-----   mutation
 def mutation(gen):
     mutationIdx = np.random.permutation(numWorkers)
     mutationIdx = mutationIdx[0:mutaSize]
-    print(mutationIdx)
+    # print(mutationIdx)
     for i in mutationIdx:
         gen[i,:] = modify_shift8h()
     return gen
 
 mutation(popuInteger[0])
 
+#- fitness of a population
+
+
+# Fitness function of each gen
+popuFitness = np.zeros([popuSize])
+for i in range(popuSize):
+    popuFitness[i] = computeFitness(popuInteger[i, :, :])
+
+cumulativeFitness = np.cumsum(popuFitness)
+
+
+it=0
+maxPopuFitness = np.zeros([maxIt],)
+
+#
+while it < maxIt:
+    sortedIndexPopuFitness = np.argsort(popuFitness)
+    best_index_numElitism = popuSize - numElitism + 1
+    auxPopuInteger[0:numElitism - 1, :, :] = \
+    popuInteger[sortedIndexPopuFitness[best_index_numElitism:], :, :]
+
+
+    numCrossPairs = np.random.binomial((popuSize-numElitism)/2,probCross)
+        # print 'numCrossPairs',numCrossPairs #shuai
+    numNoCrossGenes = popuSize - 2*numCrossPairs - numElitism
+
+
+    for k in range(0, numCrossPairs - 1):
+        selected1 = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        # array([False, False, False, False, False,  True,  True,  True,  True,  True], dtype=bool)
+        # selected1=5
+        # choose a random number from 0..1 and times the sum of the fitness
+        # the index of the first Ture
+
+        selected2 = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+
+        cross = crossover(popuInteger[selected1, :, :], popuInteger[selected2, :, :])
+        auxPopuInteger[numElitism + 2 * k, :, :] = cross[0]
+        auxPopuInteger[numElitism + 2 * k + 1, :, :] = cross[1]
+        # this updates the auxPopuInteger every two do an append
+
+    for k in range(0, numNoCrossGenes - 1):
+        selected = np.argmax(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
+        auxPopuInteger[numElitism + 2 * numCrossPairs + k, :, :] = popuInteger[selected, :, :]
+            # again append more solution to the pool.
+
+
+    #Mutation
+    numMutation = np.random.binomial(popuSize,probMutation)
+    # print numMutation #shuai
+    indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
+    for k in range (0,numMutation-1):
+           auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
+    popuInteger = auxPopuInteger
+
+
+    # Fitness function
+    for i in range(popuSize):
+        popuFitness[i] = computeFitness(popuInteger[i, :, :])
+
+    cumulativeFitness = np.cumsum(popuFitness)
+    bestSolInd = np.argmin(popuFitness)
+    maxPopuFitness[it] = popuFitness[bestSolInd]
+    print (maxPopuFitness[it]) # shuai
+    # print it #shuai 2
+    print(it)
+    it = it+1
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bestSolution = popuInteger[bestSolInd,:,:]
+genWorkersHalfHours = shift2demand(popuInteger[bestSolInd,:,:])
+print (maxPopuFitness[it-1])
+t1 = time()
+print ('time',t1-t)
