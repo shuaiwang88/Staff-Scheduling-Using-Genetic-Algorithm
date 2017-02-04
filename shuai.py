@@ -236,7 +236,7 @@ cumulativeFitness = np.cumsum(popuFitness)
 
 
 it=0
-maxPopuFitness = np.zeros([maxIt],)
+minPopuFitness = np.zeros([maxIt],)
 
 #
 while it < maxIt:
@@ -259,7 +259,7 @@ while it < maxIt:
         # the index of the first Ture
 
         selected2 = np.argmin(cumulativeFitness >= np.random.random() * cumulativeFitness[-1])
-˚
+
         cross = crossover(popuInteger[selected1, :, :], popuInteger[selected2, :, :])
         auxPopuInteger[numElitism + 2 * k, :, :] = cross[0]
         auxPopuInteger[numElitism + 2 * k + 1, :, :] = cross[1]
@@ -286,8 +286,8 @@ while it < maxIt:
 
     cumulativeFitness = np.cumsum(popuFitness)
     bestSolInd = np.argmin(popuFitness)
-    maxPopuFitness[it] = popuFitness[bestSolInd]
-    print (maxPopuFitness[it]) # shuai
+    minPopuFitness[it] = popuFitness[bestSolInd]
+    print (minPopuFitness[it]) # shuai
     # print it #shuai 2
     print(it)
     it = it+1
@@ -296,6 +296,6 @@ while it < maxIt:
 
 bestSolution = popuInteger[bestSolInd,:,:]
 genWorkersHalfHours = shift2demand(popuInteger[bestSolInd,:,:])
-print (maxPopuFitness[it-1])
+print (minPopuFitness[it-1])
 t1 = time()
 print ('time',t1-t)
