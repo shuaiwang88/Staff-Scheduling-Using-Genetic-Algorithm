@@ -33,6 +33,10 @@ off_days_8h_parttime=5
 
 #shift
 numWorkers = 25 #10
+num_fulltime =23
+num_parttime= 2
+
+
 cost_fulltime= 20 #
 shift_start_end = 2  # have a start and a end integer each day
 #demand of workers
@@ -157,10 +161,15 @@ integer2binaryShift(b)
 popuInteger = np.zeros((popuSize,numWorkers,7,2),dtype=np.int)
 popuBinary = np.zeros((popuSize,numWorkers,LastShiftEndTime),dtype=np.int)
 auxPopuInteger = popuInteger
-for i in range(0,popuSize):
-    for j in range(0,numWorkers):
-            popuInteger[i, j, :] = modify_shift8h()
+# for i in range(0,popuSize):
+#     for j in range(0,numWorkers):
+#             popuInteger[i, j, :] = modify_shift8h()
 
+for i in range(0, popuSize):
+    for j in range(0, num_fulltime):
+        popuInteger[i, j, :] = modify_shift8h()
+    for k in range(0, num_parttime):
+        popuInteger[i, j, :] = part_time_8h() # add part time
 
 
 
