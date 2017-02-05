@@ -5,7 +5,7 @@ Genetic algorithm
 @author: shuai wang
 """
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from time import time
 import random as rd
 t = time()
@@ -16,20 +16,30 @@ t = time()
 # minRest = 0.5 * 2
 # maxRest = 2.5 * 2
 
-rest_time=1
+# rest_time=1
 LastShiftEndTime = 24*7 +8 # 176 next monday's morning 8am
+hours_168 =168
 day_rest=12
 days = np.arange(7)
 time_8h=8
+
+
 off_days_8h=2
+off_days_8h_parttime=5
+
+
 
 # hour_size=24*7
 
 #shift
-numWorkers = 10 #10
+numWorkers = 25 #10
 cost_fulltime= 20 #
+shift_start_end = 2  # have a start and a end integer each day
 #demand of workers
-demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
+# demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
+demand = np.genfromtxt("2016-06-20.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
+demand=np.array(np.split(demand,7))
+
 hourly_staff_handle=20
 
 under_cover_cost=40
@@ -38,14 +48,14 @@ under_cover_cost=40
 # Genetic algorithm parameters
 popuSize = 200# 200   5   10
 probCross = 0.8 #0.8
-mutaSize = 2
-probMutation = 0.1
+mutaSize = 4
+probMutation = 0.2 # 0.2
 numElitism = 20 #20    2    4
-maxIt = 1000 #300
+maxIt = 400 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 def shift8h():
-    shift = np.zeros((7, off_days_8h), dtype=int)
+    shift = np.zeros((7, shift_start_end), dtype=int)
     twodaysoff = np.sort(np.random.choice(range(7), off_days_8h, replace=False)) # random 2 dif number
     # twodaysoff=[0,3] # twodaysoff=[1,6] # wodaysoff=[0,1] # twodaysoff=[1,2]
     # print("twodaysoff:", twodaysoff)
@@ -109,6 +119,22 @@ b=modify_shift8h()
 #        [  0,   0],
 #        [122, 130],
 #        [153, 161]])
+
+
+def part_time_8h(): # part_time_8h(time_8h)
+    shift = np.zeros((7, shift_start_end), dtype=int)
+    random1 = np.random.randint(hours_168 - 12 - 8)
+    random2 = np.random.randint(random1 + 8 + 12, hours_168)
+
+    random1_day = random1 // 24
+    random2_day = random2 // 24
+
+    shift[random1_day], shift[random2_day] = [random1,random1+time_8h] , [random2,random2+time_8h]
+
+    return shift
+
+
+
 
 #-------  mapping shift like 2:10 26:34 until 24*7+8 to 0,1 #
 def integer2binaryShift(workerInteger):
@@ -293,13 +319,34 @@ while it < maxIt:
     # print(minPopuFitness)
     print (minPopuFitness[it]) # shuai
     # print it #shuai 2
-    # print(it)
+    print(it)
     it = it+1
 
 
 
 bestSolution = popuInteger[bestSolInd,:,:]
 solution = shift2demand(popuInteger[bestSolInd,:,:])
-print (minPopuFitness[it])
+print (minPopuFitness[it-1])
 t1 = time()
 print ('time',t1-t)
+
+
+
+
+firstShift = bestSolution[:]
+# secondShift = bestSolution[:,2:4]
+#broken_barh?
+y = np.arange(numWorkers)
+x = np.arange(LastShiftEndTime)
+ax1 = plt.subplot(211)
+plt.barh(y,firstShift[:,1]-firstShift[:,0],0.5,firstShift[:,0],hold=True)
+# plt.barh(y,secondShift[:,1]-secondShift[:,0],0.5,secondShift[:,0],hold=True)
+plt.xticks(x)
+plt.grid()
+plt.subplot(212, sharex=ax1)
+plt.grid()
+plt.bar(x*0.5+8,solution-demand_require_workers,width=0.5)
+plt.show()
+
+
+
