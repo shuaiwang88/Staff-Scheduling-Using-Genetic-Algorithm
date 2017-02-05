@@ -168,8 +168,9 @@ auxPopuInteger = popuInteger
 for i in range(0, popuSize):
     for j in range(0, num_fulltime):
         popuInteger[i, j, :] = modify_shift8h()
+
     for k in range(0, num_parttime):
-        popuInteger[i, j, :] = part_time_8h() # add part time
+        popuInteger[i, num_fulltime+k, :] = part_time_8h() # add part time
 
 
 
