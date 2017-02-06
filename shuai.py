@@ -363,22 +363,22 @@ plt.close()
 
 
 
-
-
-firstShift = bestSolution[:]
-# secondShift = bestSolution[:,2:4]
-#broken_barh?
-y = np.arange(numWorkers)
-x = np.arange(LastShiftEndTime)
-ax1 = plt.subplot(211)
-plt.barh(y,firstShift[:,1]-firstShift[:,0],0.5,firstShift[:,0],hold=True)
-# plt.barh(y,secondShift[:,1]-secondShift[:,0],0.5,secondShift[:,0],hold=True)
-plt.xticks(x)
-plt.grid()
-plt.subplot(212, sharex=ax1)
-plt.grid()
-plt.bar(x*0.5+8,solution-demand_require_workers,width=0.5)
-plt.show()
-
-
-
+#
+#
+# firstShift = bestSolution[:]
+# # secondShift = bestSolution[:,2:4]
+# #broken_barh?
+# y = np.arange(numWorkers)
+# x = np.arange(LastShiftEndTime)
+# ax1 = plt.subplot(211)
+# plt.barh(y,firstShift[:,1]-firstShift[:,0],0.5,firstShift[:,0],hold=True)
+# # plt.barh(y,secondShift[:,1]-secondShift[:,0],0.5,secondShift[:,0],hold=True)
+# plt.xticks(x)
+# plt.grid()
+# plt.subplot(212, sharex=ax1)
+# plt.grid()
+# plt.bar(x*0.5+8,solution-demand_require_workers,width=0.5)
+# plt.show()
+#
+#
+#
