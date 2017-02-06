@@ -55,7 +55,7 @@ probCross = 0.8 #0.8
 mutaSize = 4
 probMutation = 0.2 # 0.2
 numElitism = 20 #20    2    4
-maxIt = 400 #300
+maxIt = 20 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 def shift8h():
@@ -215,7 +215,8 @@ demand_overweek = np.append(demand_flat,demand_flat[0:8])
 demand_require_workers=np.ceil(demand_overweek/hourly_staff_handle)
 # max_under_coverage= np.sum(np.maximum(demand_require_workers,
 #                                       demand_require_workers-numWorkers))
-num_undercover= demand_require_workers - numWorkers
+
+# num_undercover= demand_require_workers - numWorkers # this is wrong
 
 def computeFitness(genInteger):
     # shift_hourly_capability=shift2demand(genInteger)* hourly_staff_handle
@@ -274,7 +275,11 @@ cumulativeFitness = np.cumsum(popuFitness)
 it=0
 minPopuFitness = np.zeros([maxIt],)
 
-#
+
+
+# save results:
+results_iter = np.zeros(maxIt,dtype=np.int)
+
 while it < maxIt:
     sortedIndexPopuFitness = np.argsort(popuFitness)
     # best_index_numElitism = popuSize - numElitism + 1 # shuai this is best # max value
@@ -330,6 +335,7 @@ while it < maxIt:
     print (minPopuFitness[it]) # shuai
     # print it #shuai 2
     print(it)
+    results_iter[it] = minPopuFitness[it]
     it = it+1
 
 
@@ -337,8 +343,24 @@ while it < maxIt:
 bestSolution = popuInteger[bestSolInd,:,:]
 solution = shift2demand(popuInteger[bestSolInd,:,:])
 print (minPopuFitness[it-1])
+
 t1 = time()
 print ('time',t1-t)
+
+
+print (bestSolution)
+print ("undercover,",demand_require_workers - solutio˚n)
+
+
+
+min_obj=int(minPopuFitness[-1])
+plt.plot(range(maxIt),results_iter)
+
+plt.title("objective: %d" % min_obj)
+plt.show()
+plt.savefig('result_it.png')
+plt.close()
+
 
 
 
