@@ -41,7 +41,9 @@ cost_fulltime= 20 #
 shift_start_end = 2  # have a start and a end integer each day
 #demand of workers
 # demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
+# demand = np.genfromtxt("2015-11-26.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
 demand = np.genfromtxt("2016-06-20.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
+
 demand=np.array(np.split(demand,7))
 
 hourly_staff_handle=20
@@ -50,18 +52,19 @@ under_cover_cost=40
 
 
 # Genetic algorithm parameters
-popuSize = 200# 200   5   10
+popuSize = 250# 200   5   10
 probCross = 0.8 #0.8
-mutaSize = 4
+mutaSize = 2
 probMutation = 0.2 # 0.2
 numElitism = 20 #20    2    4
-maxIt = 20 #300
+maxIt =200 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 def shift8h():
     shift = np.zeros((7, shift_start_end), dtype=int)
     twodaysoff = np.sort(np.random.choice(range(7), off_days_8h, replace=False)) # random 2 dif number
-    # twodaysoff=[0,3] # twodaysoff=[1,6] # wodaysoff=[0,1] # twodaysoff=[1,2]
+    # twodaysoff=[0,3] # twodaysoff=[1,6] # wodaysoff=[0,1]
+    # twodaysoff=[3,6]
     # print("twodaysoff:", twodaysoff)
     work_days = np.setdiff1d(days, twodaysoff) # 5 work days
 
@@ -92,38 +95,56 @@ def shift8h():
                 shift[j - 1][1] = shift[j - 1][0] + time_8h
     return shift
 
+
+# test=np.array([[20, 28],
+#            [56, 64],
+#            [64, 72],
+#            [0, 0],
+#            [116, 124],
+#            [125, 133],
+#            [0, 0]])
+
+
+# array([[  0,   0],
+#        [ 31,  39],
+#        [ 76,  84],
+#        [ 80,  88],
+#        [  0,   0],
+#        [136, 144],
+#        [146, 154]])
+
 def modify_shift8h():
     mod_shift8h = shift8h()
+    # print(mod_shift8h)
+    # mod_shift8h = test
     #print("old:", a)
-    for i in range(1, len(mod_shift8h) - 1):
-        if abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) < 12 and np.array_equal(mod_shift8h[i],
-                                                    np.array([0, 0])) == False:  # and mod_shift8h[i][0]-a[i-1][1]!=0:
-            mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
-            mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
+    # for i in range(1, len(mod_shift8h) - 1): # wrong
+    for i in range(1, len(mod_shift8h)):
+        if np.array_equal(mod_shift8h[i],
+                       np.array([0, 0])) == False:
+            if (mod_shift8h[i][0] - mod_shift8h[i - 1][1]<=0) or \
+                    (abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) <= 12) :
+                mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
+                mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
+
+    for i in range(1,len(mod_shift8h)):
+        if np.array_equal(mod_shift8h[i],
+                       np.array([0, 0])) == False:
+            if (abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) <= 12) :
+                mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
+                mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
+    for i in range(1,len(mod_shift8h)):
+        if np.array_equal(mod_shift8h[i],
+                       np.array([0, 0])) == False:
+            if (abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) <= 12) :
+                mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
+                mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
     return mod_shift8h
-    # if a[i][0]-a[i-1][1] <0:
-    #     a[i-1]=[0,0]
-    # print("new:",a)
+
 #----------
 # a=modify_shift8h()
-b=modify_shift8h()
-# c=modify_shift8h()
-# d=modify_shift8h()
-#
-# e=modify_shift8h()
-# f=modify_shift8h()
-# g=modify_shift8h()
-# h=modify_shift8h()
-# gen1=(a,b,c,d)
-# gen2=(e,f,g,h)
-# array([[  0,   0],
-#        [ 45,  53],
-#        [ 62,  70],
-#        [ 84,  92],
-#        [  0,   0],
-#        [122, 130],
-#        [153, 161]])
-
+# for i in range(100):
+#     print(modify_shift8h())
 
 def part_time_8h(): # part_time_8h(time_8h)
     shift = np.zeros((7, shift_start_end), dtype=int)
@@ -152,7 +173,7 @@ def integer2binaryShift(workerInteger):
     # print(workerBinary)
     return workerBinary
 #------
-integer2binaryShift(b)
+# integer2binaryShift(b)
 
 # b=popuInteger[0][j,:]
 
@@ -258,6 +279,16 @@ def mutation(gen):
     for i in mutationIdx:
         gen[i,:] = modify_shift8h()
     return gen
+#
+#
+# def mutation(gen):
+#     mutationIdx = np.random.permutation(numWorkers)
+#     mutationIdx = mutationIdx[0:mutaSize]
+#     print(mutationIdx)
+#     for i in mutationIdx:
+#         if gen[i,]
+#         gen[i,:] = modify_shift8h()
+#     return gen
 
 mutation(popuInteger[0])
 
@@ -349,19 +380,19 @@ print ('time',t1-t)
 
 
 print (bestSolution)
-print ("undercover,",demand_require_workers - solutio˚n)
+print ("undercover,",demand_require_workers - solution)
 
 
-
-min_obj=int(minPopuFitness[-1])
-plt.plot(range(maxIt),results_iter)
-
-plt.title("objective: %d" % min_obj)
-plt.show()
-plt.savefig('result_it.png')
-plt.close()
-
-
+#
+# min_obj=int(minPopuFitness[-1])
+# plt.plot(range(maxIt),results_iter)
+#
+# plt.title("objective: %d" % min_obj)
+# plt.show()
+# plt.savefig('result_20151126.png')
+# plt.close()
+#
+#
 
 #
 #
