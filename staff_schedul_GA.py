@@ -4,6 +4,8 @@ Created on Tue Jan 30
 Genetic algorithm
 @author: shuai wang
 """
+
+###################
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
@@ -32,13 +34,18 @@ off_days_8h_parttime=5
 # hour_size=24*7
 
 #shift
-numWorkers = 25 #10
-num_fulltime =23
-num_parttime= 2
-
-
+numWorkers = 10 #25
+num_fulltime =8 # 23
+num_parttime= 2 #2
 cost_fulltime= 20 #
 shift_start_end = 2  # have a start and a end integer each day
+
+full_time_total_hour = 42
+max_working_days = 5
+
+work_hours_options = [6, 8, 10]
+weights = [0.2, 0.6, 0.2]
+
 #demand of workers
 # demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
 # demand = np.genfromtxt("2015-11-26.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
@@ -60,86 +67,62 @@ numElitism = 20 #20    2    4
 maxIt =200 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
-def shift8h():
-    shift = np.zeros((7, shift_start_end), dtype=int)
-    twodaysoff = np.sort(np.random.choice(range(7), off_days_8h, replace=False)) # random 2 dif number
-    # twodaysoff=[0,3] # twodaysoff=[1,6] # wodaysoff=[0,1]
-    # twodaysoff=[3,6]
-    # print("twodaysoff:", twodaysoff)
-    work_days = np.setdiff1d(days, twodaysoff) # 5 work days
 
-    for i in work_days:
-        for j in twodaysoff:
-            if j - i != 1: # if the day is NOT the previous day before the off-days
-                starttime1 = np.random.randint(0, 23) + i * 24
-                endtime = starttime1 + time_8h
-                shift[i] = (starttime1, endtime)
-                # else:
-            if j - i == 1 and j != 6: # if the days is the day before the off-days
-                starttime1 = np.random.randint(0, 16) + i * 24 #not start work withing 8 hours before midnight of off
-                endtime = starttime1 + time_8h
-                shift[i] = (starttime1, endtime)
-                # add
-                if starttime1 - shift[i - 1][1] < 12:  # 12 hours break btw work days
-                    # print('yes')
-                    # shift[i-1][0]=np.random.randint(0,starttime1-12) +i*24
-                    shift[i - 1][0] = np.random.randint(0, 10) + i * 24
-                    # print(shift[i-1][0])
-                    shift[i - 1][1] = shift[i - 1][0] + time_8h
+def shift_generator():
+# for i in range(10):
+    work=np.array([1,2,3,4,5,6,7],np.int)
+    work_random=np.random.permutation(work)
 
-                    # print(shift[i])
-            if j == 6:
-                shift[j] = [0, 0]
-            if j == 1:
-                shift[j - 1][0] = (np.random.randint(0, 17))  # 0..16 24-8
-                shift[j - 1][1] = shift[j - 1][0] + time_8h
-    return shift
+    work_random_binary=np.zeros(7,dtype=np.int)
+    work_hour_daily = np.zeros(7, dtype=np.int)
+    work_total_hours=0
 
+    # print(work_random)
+    for i in range(len(work_random)):
+        hour_rand = np.random.choice(work_hours_options, p=weights)
+        work_hour_daily[work_random[i] - 1] = hour_rand
 
-# test=np.array([[20, 28],
-#            [56, 64],
-#            [64, 72],
-#            [0, 0],
-#            [116, 124],
-#            [125, 133],
-#            [0, 0]])
+        work_random_binary[work_random[i] - 1] = 1  # new
+        work_total_hours += hour_rand
 
+        if work_total_hours == 34:
+            hour_rand = np.random.choice(work_hours_options, p=[0.3, 0.7, 0])
+            work_hour_daily[work_random[i+1] - 1] = hour_rand
+            work_random_binary[work_random[i+1] - 1] = 1  # new
+            break
 
-# array([[  0,   0],
-#        [ 31,  39],
-#        [ 76,  84],
-#        [ 80,  88],
-#        [  0,   0],
-#        [136, 144],
-#        [146, 154]])
+        if (work_total_hours == 36) and (np.sum(work_random_binary) < max_working_days):  # no 6 days
+            hour_rand = np.random.choice(work_hours_options, p=[1, 0, 0])
+            work_hour_daily[work_random[i+1] - 1] = hour_rand
+            work_random_binary[work_random[i+1] - 1] = 1  # new
+            break
 
-def modify_shift8h():
-    mod_shift8h = shift8h()
-    # print(mod_shift8h)
-    # mod_shift8h = test
-    #print("old:", a)
-    # for i in range(1, len(mod_shift8h) - 1): # wrong
-    for i in range(1, len(mod_shift8h)):
-        if np.array_equal(mod_shift8h[i],
-                       np.array([0, 0])) == False:
-            if (mod_shift8h[i][0] - mod_shift8h[i - 1][1]<=0) or \
-                    (abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) <= 12) :
-                mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
-                mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
+        if work_total_hours > full_time_total_hour:
+            work_hour_daily[work_random[i] - 1] = 0
+            work_total_hours -= hour_rand
+            work_random_binary[work_random[i] - 1] = 0
+            break
+    # print(work_random_binary)
+    # print(work_hour_daily)
 
-    for i in range(1,len(mod_shift8h)):
-        if np.array_equal(mod_shift8h[i],
-                       np.array([0, 0])) == False:
-            if (abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) <= 12) :
-                mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
-                mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
-    for i in range(1,len(mod_shift8h)):
-        if np.array_equal(mod_shift8h[i],
-                       np.array([0, 0])) == False:
-            if (abs(mod_shift8h[i][0] - mod_shift8h[i - 1][1]) <= 12) :
-                mod_shift8h[i - 1][1] = mod_shift8h[i][0] - 12 - np.random.randint(0, 4)
-                mod_shift8h[i - 1][0] = mod_shift8h[i - 1][1] - time_8h
-    return mod_shift8h
+# Pick start time for the first day
+    start = np.zeros(7, np.int16)
+    end = np.zeros(7, np.int16)
+    work_random_binary = np.array((work_random_binary), dtype=bool)
+
+    first_day = np.argmax(work_random_binary)
+    start[first_day] = np.random.randint(first_day * 24, (first_day + 1) * 24)
+    end[first_day] = start[first_day] + work_hour_daily[first_day]
+    # Pick start times for the following days
+    # work_hour_daily
+
+    for i in range(len(work_hour_daily)):
+        if work_random_binary[i] == True:
+            while (start[i] - start[i - 1]) < 12 + work_hour_daily[i - 1]:
+                start[i] = np.random.randint(i * 24, (i + 1) * 24 - 1)
+                end[i] = start[i] + work_hour_daily[i]
+
+    return np.array(list(zip(start, end)))
 
 #----------
 # a=modify_shift8h()
@@ -149,7 +132,14 @@ def modify_shift8h():
 def part_time_8h(): # part_time_8h(time_8h)
     shift = np.zeros((7, shift_start_end), dtype=int)
     random1 = np.random.randint(hours_168 - 12 - 8)
-    random2 = np.random.randint(random1 + 8 + 12, hours_168)
+    print(random1)
+    if random1>(23+time_8h): # 31, random1 can be like 11, so random2 can be only > random1
+        if np.random.random_sample()>0.5: ## day1 either earlier or later
+            random2 = np.random.randint(random1 + 8 + 12, hours_168)
+        else:
+            random2 = np.random.randint(0,random1-8-12)
+    else:
+        random2 = np.random.randint(random1 + 8 + 12, hours_168)
 
     random1_day = random1 // 24
     random2_day = random2 // 24
@@ -158,8 +148,8 @@ def part_time_8h(): # part_time_8h(time_8h)
 
     return shift
 
-
-
+for i in range(100):
+    print(part_time_8h())
 
 #-------  mapping shift like 2:10 26:34 until 24*7+8 to 0,1 #
 def integer2binaryShift(workerInteger):
@@ -188,7 +178,7 @@ auxPopuInteger = popuInteger
 
 for i in range(0, popuSize):
     for j in range(0, num_fulltime):
-        popuInteger[i, j, :] = modify_shift8h()
+        popuInteger[i, j, :] = shift_generator()
 
     for k in range(0, num_parttime):
         popuInteger[i, num_fulltime+k, :] = part_time_8h() # add part time
@@ -271,23 +261,29 @@ def crossover(gen1,gen2): # one gen is the all shifts for all the workers
 crossover(popuInteger[0],popuInteger[1])
 
 
-#-----   mutation
+#-----   mutation combine full time and part time
 def mutation(gen):
-    mutationIdx = np.random.permutation(numWorkers)
-    mutationIdx = mutationIdx[0:mutaSize]
-    # print(mutationIdx)
-    for i in mutationIdx:
-        gen[i,:] = modify_shift8h()
+    mutationIdx_full = np.random.permutation(num_fulltime) # last
+    mutationIdx_full = mutationIdx_full[0:mutaSize]
+    # print(mutationIdx_8h_full)
+    for i in mutationIdx_8h_full:
+        gen[i,:] = shift_generator()
+
+    for i in range(num_fulltime,num_fulltime+num_parttime): # add parttime
+        if np.random.random_sample()>0.5:
+            gen[i,:] = part_time_8h()
     return gen
 #
-#
+
+
+# full time only
 # def mutation(gen):
 #     mutationIdx = np.random.permutation(numWorkers)
 #     mutationIdx = mutationIdx[0:mutaSize]
 #     print(mutationIdx)
 #     for i in mutationIdx:
 #         if gen[i,]
-#         gen[i,:] = modify_shift8h()
+#         gen[i,:] = shift_generator()
 #     return gen
 
 mutation(popuInteger[0])
