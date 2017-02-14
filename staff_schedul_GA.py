@@ -34,8 +34,8 @@ off_days_8h_parttime=5
 # hour_size=24*7
 
 #shift
-numWorkers = 8 #25
-num_fulltime =6 # 23
+numWorkers = 25 #25
+num_fulltime =23# 23
 num_parttime= 2 #2
 
 cost_fulltime= 20 #
@@ -58,9 +58,10 @@ hourly_staff_handle=20
 
 under_cover_cost=40
 
+over_cover = -10
 
 # Genetic algorithm parameters
-popuSize = 10# 200   5   10
+popuSize = 200# 200   5   10
 probCross = 0.8 #0.8
 mutaSize = 2 #2
 probMutation = 0.2 # 0.2
@@ -248,6 +249,13 @@ def computeFitness(genInteger):
 
 computeFitness(popuInteger[0,:,:])
 
+#
+# aa=popuInteger[0,:,:]
+# num_undercover = demand_require_workers - shift2demand(aa)
+# cost_worker_week = np.sum(cost_fulltime * shift2demand(aa))
+# sum_under_cover = np.sum(num_undercover[num_undercover > 0])
+
+
 
 #----  set up a middle point and crossover/swap, more methods see literature
 
@@ -264,16 +272,18 @@ crossover(popuInteger[0],popuInteger[1])
 def mutation(gen):
     mutationIdx_full = np.random.permutation(num_fulltime) # last
     mutationIdx_full = mutationIdx_full[0:mutaSize]
-    print(mutationIdx_full)
+    # print(mutationIdx_full)
     for i in mutationIdx_full:
         gen[i,:] = shift_generator()
 
     for j in range(num_fulltime,num_fulltime+num_parttime): # add parttime
         if np.random.random_sample()>0.5:
             gen[j,:] = part_time_8h()
-
     return gen
 #
+
+
+# def reduce_worker(gen):
 
 
 # full time only
@@ -286,7 +296,7 @@ def mutation(gen):
 #         gen[i,:] = shift_generator()
 #     return gen
 
-xx=mutation(popuInteger[0])
+# xx=mutation(popuInteger[0])
 
 #- fitness of a population
 
@@ -352,19 +362,39 @@ while it < maxIt:
     #     if kids1_best > worst_PopuFitness:
     #         # auxPopuInteger[numElitism+1,:,:] = cross1[kids1_best_ind]
     #         auxPopuInteger[numElitism + 2*k, :, :] = cross1[kids1_best_ind] # from old
-    #Mutation
+
+
+
+
+
+#Mutation old
     numMutation = np.random.binomial(popuSize,probMutation)
     # print numMutation #shuai
     indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
     for k in range (0,numMutation-1):
            auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
 
-    popuInteger = auxPopuInteger
+
 
 # REDO MUTATION:
-#     numMutation = np.random.binomial(popuSize, probMutation)
+    numMutation = np.random.binomial(popuSize, probMutation)
+    indexToMutate = np.random.randint(numElitism, popuSize - 1, numMutation)
+    for k in range(0, numMutation - 1):
+        auxPopuInteger[indexToMutate[k], :, :] = mutation(auxPopuInteger[indexToMutate[k], :, :]);
+# below is to reduce workers
+        undercover_num = demand_require_workers - shift2demand(auxPopuInteger[indexToMutate[k]])
+        sum_overcover= np.sum(undercover_num[undercover_num<0])
+        if  sum_overcover < over_cover:
+            ran_worker=np.random.randint(numWorkers)
+            auxPopuInteger[indexToMutate[k],ran_worker, :] = np.zeros((7, shift_start_end), dtype=np.int)
 
 
+
+
+
+
+    # final assiangment
+    popuInteger = auxPopuInteger
 
 
 
@@ -392,8 +422,20 @@ t1 = time()
 print ('time',t1-t)
 
 
-print (bestSolution)
-print ("undercover,",demand_require_workers - solution)
+print ('bestSolution:',  bestSolution)
+num_ass = 0
+
+for i in bestSolution:
+    if np.array_equal(i,np.zeros((7, shift_start_end), dtype=np.int)) == False:
+        num_ass += 1
+
+print('assigned # workers:', num_ass)
+print('bestsoltuon_cover:', shift2demand(bestSolution))
+
+sol_uncover =demand_require_workers - solution
+print ("undercover,",sol_uncover)
+
+print("undercover_total",np.sum(sol_uncover[sol_uncover>0]) )
 
 
 #
