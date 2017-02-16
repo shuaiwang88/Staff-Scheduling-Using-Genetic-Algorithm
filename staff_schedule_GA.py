@@ -34,9 +34,9 @@ off_days_8h_parttime=5
 # hour_size=24*7
 
 #shift
-numWorkers = 25 #25
-num_fulltime =23# 23
-num_parttime= 2 #2
+numWorkers = 40 #25
+num_fulltime = 35# 23
+num_parttime= 5 #2
 
 cost_fulltime= 20 #
 shift_start_end = 2  # have a start and a end integer each day
@@ -54,19 +54,19 @@ demand = np.genfromtxt("2016-06-20.csv", delimiter=',', skip_header =1,usecols=3
 
 demand=np.array(np.split(demand,7))
 
-hourly_staff_handle=20
+hourly_staff_handle=1
 
-under_cover_cost=40
+under_cover_cost=400
 
-over_cover = -10
-
+over_cover = -50
+under_cover = 50
 # Genetic algorithm parameters
-popuSize = 200# 200   5   10
+popuSize = 100# 200   5   10
 probCross = 0.8 #0.8
-mutaSize = 2 #2
+mutaSize = 4 #2
 probMutation = 0.2 # 0.2
-numElitism = 5 #20    2    4
-maxIt =200 #300
+numElitism = 10 #20    2    4
+maxIt =10 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 
@@ -113,7 +113,9 @@ def shift_generator():
     work_random_binary = np.array((work_random_binary), dtype=bool)
 
     first_day = np.argmax(work_random_binary)
-    start[first_day] = np.random.randint(first_day * 24, (first_day + 1) * 24)
+    first_day = np.argmax(work_random_binary)
+    start[first_day] = np.random.randint(first_day * 24, (first_day + 1) * 24)# old
+    # start[first_day] = np.random.randint(first_day * 24, (first_day + 1) * 24-10)
     end[first_day] = start[first_day] + work_hour_daily[first_day]
     # Pick start times for the following days
     # work_hour_daily
@@ -123,32 +125,76 @@ def shift_generator():
             while (start[i] - start[i - 1]) < 12 + work_hour_daily[i - 1]:
                 start[i] = np.random.randint(i * 24, (i + 1) * 24 - 1)
                 end[i] = start[i] + work_hour_daily[i]
+                # if end[i] > (hours_168):  # new
+                #     end[i] = start[i] - hours_168  # new
 
     return np.array(list(zip(start, end)))
 
+for i in range(100):
+    print(shift_generator())
+#
+# def part_time_8h(): # part_time_8h(time_8h)
+#     shift = np.zeros((7, shift_start_end), dtype=np.int)
+#     random1 = np.random.randint(hours_168 - 12 - 8)
+#     # print(random1)
+#     if random1>(23+time_8h): # 31, random1 can be like 11, so random2 can be only > random1
+#         if np.random.random_sample()>0.5: ## day1 either earlier or later
+#             random2 = np.random.randint(random1 + 8 + 12, hours_168)
+#         else:
+#             random2 = np.random.randint(0,random1-8-12)
+#     else:
+#         random2 = np.random.randint(random1 + 8 + 12, hours_168)
+#
+#     random1_day = random1 // 24
+#     random2_day = random2 // 24
+#
+#     shift[random1_day], shift[random2_day] = [random1,random1+time_8h] , [random2,random2+time_8h]
+#
+#     return shift
 
 
+# code
 def part_time_8h(): # part_time_8h(time_8h)
+
     shift = np.zeros((7, shift_start_end), dtype=np.int)
-    random1 = np.random.randint(hours_168 - 12 - 8)
+    hour_rand1 = np.random.choice(work_hours_options, p=weights)
+    random1 = np.random.randint(hours_168 - 12 - hour_rand1)
     # print(random1)
-    if random1>(23+time_8h): # 31, random1 can be like 11, so random2 can be only > random1
+    if random1>(23+hour_rand1): # 31, random1 can be like 11, so random2 can be only > random1
         if np.random.random_sample()>0.5: ## day1 either earlier or later
-            random2 = np.random.randint(random1 + 8 + 12, hours_168)
+
+            random2 = np.random.randint(random1 + hour_rand1 + 12, hours_168)
         else:
-            random2 = np.random.randint(0,random1-8-12)
+            random2 = np.random.randint(0,random1-hour_rand1-12)
     else:
-        random2 = np.random.randint(random1 + 8 + 12, hours_168)
+        random2 = np.random.randint(random1 + hour_rand1 + 12, hours_168)
+    hour_rand2 = np.random.choice(work_hours_options, p=weights)
 
     random1_day = random1 // 24
     random2_day = random2 // 24
 
-    shift[random1_day], shift[random2_day] = [random1,random1+time_8h] , [random2,random2+time_8h]
+    shift[random1_day], shift[random2_day] = [random1,random1+hour_rand1] , [random2,random2+hour_rand2]
 
     return shift
 
+#
+#
+#
+#
+#
 # for i in range(100):
 #     print(part_time_8h())
+
+xxx=np.array(
+[[ 1  ,9],
+ [  0  , 0],
+ [  0  , 0],
+ [ 85 , 91],
+ [106, 116],
+ [132, 140],
+ [166, 168],
+ [0,6]])
+
 
 #-------  mapping shift like 2:10 26:34 until 24*7+8 to 0,1 #
 def integer2binaryShift(workerInteger):
@@ -160,10 +206,14 @@ def integer2binaryShift(workerInteger):
         if np.array_equal(hr, [0, 0]) == False:
             # workerBinary[hr[0]:hr[0] + time_8h + 1] = 1  # +8h (index +1)
             # workerBinary[hr[0]:hr[0] + time_8h] = 1  # +8h (index +1)
-            workerBinary[hr[0]:hr[1]] = 1
+            # workerBinary[hr[0]:hr[1]] = 1 # old for non cyclic
+            workerBinary[hr[0]:hr[1]] += 1
         # print(
     # print(workerBinary)
     return workerBinary
+
+integer2binaryShift(xxx)
+
 #------
 b=part_time_8h()
 b=shift_generator()
@@ -226,7 +276,8 @@ shift2demand(popuInteger[0])
 ## --------------  objective
 # convert 168 demand to 168+8 demand
 demand_flat = demand.flatten()
-demand_overweek = np.append(demand_flat,demand_flat[0:8])
+demand_overweek = np.append(demand_flat,demand_flat[0:8]) ## add up mondays's fist 8 hours
+# demand_overweek=np.append(demand_flat, np.zeros(8,np.int))
 demand_require_workers=np.ceil(demand_overweek/hourly_staff_handle)
 # max_under_coverage= np.sum(np.maximum(demand_require_workers,
 #                                       demand_require_workers-numWorkers))
@@ -245,6 +296,8 @@ def computeFitness(genInteger):
     under_cover_penalty = under_cover_cost * sum_under_cover
 
     total_cost = cost_worker_week + under_cover_penalty
+
+
     return np.int(total_cost)
 
 computeFitness(popuInteger[0,:,:])
@@ -281,22 +334,6 @@ def mutation(gen):
             gen[j,:] = part_time_8h()
     return gen
 #
-
-
-# def reduce_worker(gen):
-
-
-# full time only
-# def mutation(gen):
-#     mutationIdx = np.random.permutation(numWorkers)
-#     mutationIdx = mutationIdx[0:mutaSize]
-#     print(mutationIdx)
-#     for i in mutationIdx:
-#         if gen[i,]
-#         gen[i,:] = shift_generator()
-#     return gen
-
-# xx=mutation(popuInteger[0])
 
 #- fitness of a population
 
@@ -362,21 +399,21 @@ while it < maxIt:
     #     if kids1_best > worst_PopuFitness:
     #         # auxPopuInteger[numElitism+1,:,:] = cross1[kids1_best_ind]
     #         auxPopuInteger[numElitism + 2*k, :, :] = cross1[kids1_best_ind] # from old
+    #
 
 
 
 
-
-#Mutation old
-    numMutation = np.random.binomial(popuSize,probMutation)
-    # print numMutation #shuai
-    indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
-    for k in range (0,numMutation-1):
-           auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
-
+## Mutation old
+    # numMutation = np.random.binomial(popuSize,probMutation)
+    # # print numMutation #shuai
+    # indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
+    # for k in range (0,numMutation-1):
+    #        auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
 
 
-# REDO MUTATION:
+
+## REDO MUTATION:
     numMutation = np.random.binomial(popuSize, probMutation)
     indexToMutate = np.random.randint(numElitism, popuSize - 1, numMutation)
     for k in range(0, numMutation - 1):
@@ -384,12 +421,12 @@ while it < maxIt:
 # below is to reduce workers
         undercover_num = demand_require_workers - shift2demand(auxPopuInteger[indexToMutate[k]])
         sum_overcover= np.sum(undercover_num[undercover_num<0])
-        if  sum_overcover < over_cover:
+        sum_undercover = np. sum(undercover_num[undercover_num>0]) # shuai
+
+        # if  sum_overcover < over_cover :
+        if sum_overcover < over_cover or sum_undercover < under_cover:
             ran_worker=np.random.randint(numWorkers)
             auxPopuInteger[indexToMutate[k],ran_worker, :] = np.zeros((7, shift_start_end), dtype=np.int)
-
-
-
 
 
 
@@ -430,13 +467,16 @@ for i in bestSolution:
         num_ass += 1
 
 print('assigned # workers:', num_ass)
+
+print('demand:',demand_require_workers )
+print('total_demand',np.sum(demand_require_workers))
 print('bestsoltuon_cover:', shift2demand(bestSolution))
 
 sol_uncover =demand_require_workers - solution
 print ("undercover,",sol_uncover)
 
 print("undercover_total",np.sum(sol_uncover[sol_uncover>0]) )
-
+print("overcover_total",np.sum(sol_uncover[sol_uncover<0]) )
 
 #
 # min_obj=int(minPopuFitness[-1])
