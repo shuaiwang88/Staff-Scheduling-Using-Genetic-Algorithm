@@ -45,7 +45,7 @@ full_time_total_hour = 42
 max_working_days = 5
 
 work_hours_options = [6, 8, 10]
-weights = [0.1, 0.8, 0.1]
+weights = [0.2, 0.7, 0.1]
 
 #demand of workers
 # demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
@@ -53,6 +53,9 @@ weights = [0.1, 0.8, 0.1]
 demand = np.genfromtxt("2016-06-20.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
 
 demand=np.array(np.split(demand,7))
+demand_daily = np.sum(demand,axis=1)
+demand_order= np.argsort(demand_daily, axis=0)[::-1]+1 # daily demand in descending order
+
 
 hourly_staff_handle=1
 
@@ -66,14 +69,17 @@ probCross = 0.8 #0.8
 mutaSize = 1 #2
 probMutation = 0.2 # 0.2
 numElitism = 20 #20    2    4
-maxIt =30000 #300
+maxIt =200 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 
 def shift_generator():
 # for i in range(10):
-    work=np.array([1,2,3,4,5,6,7],np.int)
-    work_random=np.random.permutation(work)
+#     work=np.array([1,2,3,4,5,6,7],np.int)
+#     work_random=np.random.permutation(work)
+    work_random = demand_order # assign high demand with priority
+    if  np.random.random_sample()> 0.7:
+        work_random=np.random.permutation(work_random)
 
     work_random_binary=np.zeros(7,dtype=np.int)
     work_hour_daily = np.zeros(7, dtype=np.int)
@@ -370,7 +376,7 @@ while it < maxIt:
     auxPopuInteger[0:numElitism - 1, :, :] = popuInteger[sortedIndexPopuFitness[0:best_index_numElitism], :, :]
 
 
-##old crossover
+# ##old crossover
     numCrossPairs = np.random.binomial((popuSize-numElitism)/2,probCross)  # print 'numCrossPairs',numCrossPairs #shuai
     numNoCrossGenes = popuSize - 2*numCrossPairs - numElitism
     #
@@ -408,38 +414,38 @@ while it < maxIt:
     #         # auxPopuInteger[numElitism+1,:,:] = cross1[kids1_best_ind]
     #         auxPopuInteger[numElitism + 2*k, :, :] = cross1[kids1_best_ind] # from old
     #
-    #
+
 
 
 
 ## Mutation old
-    numMutation = np.random.binomial(popuSize,probMutation)
-    # print numMutation #shuai
-    indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
-    for k in range (0,numMutation-1):
-           auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
+    # numMutation = np.random.binomial(popuSize,probMutation)
+    # # print numMutation #shuai
+    # indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
+    # for k in range (0,numMutation-1):
+    #        auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
 
 
 
 # ## REDO MUTATION:
-#     numMutation = np.random.binomial(popuSize, probMutation)
-#     indexToMutate = np.random.randint(numElitism, popuSize - 1, numMutation)
-#     for k in range(0, numMutation - 1):
-#         auxPopuInteger[indexToMutate[k], :, :] = mutation(auxPopuInteger[indexToMutate[k], :, :]);
-# # below is to reduce workers
-#         undercover_num = demand_require_workers - shift2demand(auxPopuInteger[indexToMutate[k]])
-#         sum_overcover= np.sum(undercover_num[undercover_num<0])
-#         sum_undercover = np. sum(undercover_num[undercover_num>0]) # shuai
-#
-#
-#
-#         # if  sum_overcover < over_cover :
-#         if sum_overcover < over_cover or sum_undercover < under_cover:
-#             print('sum_overcover',sum_overcover)
-#             print('sum_undercover;', sum_undercover)
-#             ran_worker=np.random.randint(numWorkers)
-#             auxPopuInteger[indexToMutate[k],ran_worker, :] = np.zeros((8, shift_start_end), dtype=np.int) #7
-#
+    numMutation = np.random.binomial(popuSize, probMutation)
+    indexToMutate = np.random.randint(numElitism, popuSize - 1, numMutation)
+    for k in range(0, numMutation - 1):
+        auxPopuInteger[indexToMutate[k], :, :] = mutation(auxPopuInteger[indexToMutate[k], :, :]);
+# below is to reduce workers
+        undercover_num = demand_require_workers - shift2demand(auxPopuInteger[indexToMutate[k]])
+        sum_overcover= np.sum(undercover_num[undercover_num<0])
+        sum_undercover = np. sum(undercover_num[undercover_num>0]) # shuai
+
+
+
+        # if  sum_overcover < over_cover :
+        if sum_overcover < over_cover or sum_undercover < under_cover:
+            # print('sum_overcover',sum_overcover)
+            # print('sum_undercover;', sum_undercover)
+            ran_worker=np.random.randint(numWorkers)
+            auxPopuInteger[indexToMutate[k],ran_worker, :] = np.zeros((8, shift_start_end), dtype=np.int) #7
+
 
 
     # final assiangment
