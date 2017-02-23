@@ -45,16 +45,29 @@ full_time_total_hour = 42
 max_working_days = 5
 
 work_hours_options = [6, 8, 10]
-weights = [0.2, 0.7, 0.1]
+weights = [0.2, 0.6, 0.2]
 
 #demand of workers
 # demand = np.loadtxt("Demand_Test.csv", delimiter='\t', usecols=range(1,25),dtype=np.int)
 # demand = np.genfromtxt("2015-11-26.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
 demand = np.genfromtxt("2016-06-20.csv", delimiter=',', skip_header =1,usecols=3,dtype=np.int)
-
+total_demand=sum(demand)
+#
 demand=np.array(np.split(demand,7))
+demand_flat = demand.flatten()
 demand_daily = np.sum(demand,axis=1)
-demand_order= np.argsort(demand_daily, axis=0)[::-1]+1 # daily demand in descending order
+demand_percentage = demand_daily/total_demand
+demand_order= np.argsort(demand_daily, axis=0)[::-1] # daily demand in descending order
+
+demand_max_daily = np.max(demand,axis=1)# daily max demand
+
+# demand_max_daily_ind = np.argmax(demand,axis=1) # max demand in hour in o day
+import copy
+under_cover_hourly = copy.copy(demand_flat)
+under_cover_hourly_by_day = under_cover_hourly.reshape(7, 24)
+# under_cover_hourly = demand_flat
+# under_cover_hourly_by_day = under_cover_hourly.reshape(24,-1).T
+demand_max_daily_ind = copy.copy(np.argmax(demand,axis=1)) # max demand in hour in o day
 
 
 hourly_staff_handle=1
@@ -73,13 +86,13 @@ maxIt =200 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 
+## generate shifts
 def shift_generator():
-# for i in range(10):
-#     work=np.array([1,2,3,4,5,6,7],np.int)
-#     work_random=np.random.permutation(work)
-    work_random = demand_order # assign high demand with priority
-    if  np.random.random_sample()> 0.7:
-        work_random=np.random.permutation(work_random)
+    global under_cover_hourly
+    global under_cover_hourly_by_day
+    global demand_max_daily_ind
+
+    work_random=np.random.choice(7, 7, p=demand_percentage, replace=False) +1
 
     work_random_binary=np.zeros(7,dtype=np.int)
     work_hour_daily = np.zeros(7, dtype=np.int)
@@ -110,41 +123,111 @@ def shift_generator():
             work_total_hours -= hour_rand
             work_random_binary[work_random[i] - 1] = 0
             break
-    # print(work_random_binary)
-    # print(work_hour_daily)
 
-# Pick start time for the first day
-#     start = np.zeros(7, np.int16) # 7
-#     end = np.zeros(7, np.int16)  # 7
     start = np.zeros(8, np.int16)  # 7
     end = np.zeros(8, np.int16)  # 7
 
     work_random_binary = np.array((work_random_binary), dtype=bool)
 
     first_day = np.argmax(work_random_binary)
-    first_day = np.argmax(work_random_binary)
-    start[first_day] = np.random.randint(first_day * 24, (first_day + 1) * 24)# old
-    # start[first_day] = np.random.randint(first_day * 24, (first_day + 1) * 24-15)
-    end[first_day] = start[first_day] + work_hour_daily[first_day]
-    # Pick start times for the following days
-    # work_hour_daily
 
-    for i in range(len(work_hour_daily)):
+    demand_max_daily_ind = np.argmax(under_cover_hourly_by_day, axis=1)
+    print("demand_max_daily_ind",demand_max_daily_ind)
+
+    start_option= range(0, 24) # 24+1
+    end_option = range(work_hour_daily[first_day],24+work_hour_daily[first_day]) # work_hour_daily[first_day]+1
+    shift_option = np.stack((start_option, end_option), axis=-1)
+
+    # below is the max hour that the shift ends
+    under_cover_hourly_selection = under_cover_hourly[0:24+work_hour_daily[first_day]] # work_hour_daily[first_day]+1
+
+    shift_option2_binary = np.zeros((len(shift_option),24+work_hour_daily[first_day]-1),dtype=np.int) #work_hour_daily[first_day]
+    shift_option2_binary_1_index = np.zeros((len(shift_option), work_hour_daily[first_day]), dtype=np.int)
+    for i in range(len(shift_option)):
+        # shift_option2_binary[i][shift_option[i][0]:shift_option[i][1]+1] += 1
+        shift_option2_binary[i][shift_option[i][0]:shift_option[i][1]] += 1
+        shift_option2_binary_1_index[i] = np.array(np.where(shift_option2_binary[i] == 1))
+
+    # shift_option_undercover_sum = np.zeros(len(shift_option),dtype=np.int)
+
+    cover_per_shift= np.zeros(len(shift_option),dtype=np.int)
+
+
+    for i in range(len(shift_option)):
+        gap = under_cover_hourly_selection[shift_option2_binary_1_index[i][0]:shift_option2_binary_1_index[i][-1]+1]\
+                                           - np.ones(work_hour_daily[first_day], dtype=np.int)
+        cover_per_shift[i] = len(gap[gap>0])
+
+    max_cover_ind = np.argmax(cover_per_shift)
+    start[first_day] = shift_option[max_cover_ind][0]
+    end[first_day] = shift_option[max_cover_ind][1]
+
+
+    for i in range(1,len(work_hour_daily)):
         if work_random_binary[i] == True:
+            # start_option = range(24*i, 24*(i+1) + 1)#
+            start_option = range(24 * i+1, 24 * (i + 1) )
+            # end_option = range(24*i+work_hour_daily[i], 24*(i+1) + work_hour_daily[i] + 1)
+            end_option = range(24 * i + work_hour_daily[i]+1, 24 * (i + 1) + work_hour_daily[i])
+            shift_option = np.stack((start_option, end_option), axis=-1)
+
+            # under_cover_hourly_selection = under_cover_hourly[24*i : 24*(i+1) + work_hour_daily[i] + 1]
+            under_cover_hourly_selection = under_cover_hourly[24*i : 24*(i+1) + work_hour_daily[i] ]
+            if i ==6:
+                under_cover_hourly_selection = np.append(under_cover_hourly[np.arange(24*i , 24*(i+1))], \
+                                               under_cover_hourly[np.arange(0,work_hour_daily[i])])
+
+
+            # shift_option2_binary = np.zeros((len(shift_option), 24*i + work_hour_daily[i]), dtype=np.int)
+            shift_option2_binary = np.zeros((len(shift_option), 24*i + work_hour_daily[i]-1), dtype=np.int)
+
+            shift_option2_binary_1_index = np.zeros((len(shift_option), work_hour_daily[i]), dtype=np.int)
+
+            for j in range(len(shift_option)):
+                # shift_option2_binary[i][shift_option[i][0]:shift_option[i][1]+1] += 1
+                shift_option2_binary[j][shift_option[j][0]-24*i:shift_option[j][1]-24*i] += 1
+                shift_option2_binary_1_index[j] = np.array(np.where(shift_option2_binary[j] == 1))
+
+            # shift_option_undercover_sum = np.zeros(len(shift_option),dtype=np.int)
+
+            cover_per_shift = np.zeros(len(shift_option), dtype=np.int)
+
+            for k in range(len(shift_option)):
+                gap = under_cover_hourly_selection[
+                      (shift_option2_binary_1_index[k][0]):(shift_option2_binary_1_index[k][-1]+ 1)] \
+                      - np.ones(work_hour_daily[i], dtype=np.int)
+                cover_per_shift[k] = len(gap[gap > 0])
+
+            max_cover_ind = np.argmax(cover_per_shift)
+            # start[i] = shift_option[max_cover_ind][0] + 24 * i
+            # end[i] = shift_option[max_cover_ind][1] + 24*i
+            #
+            start[i] = shift_option[max_cover_ind][0]
+            end[i] = shift_option[max_cover_ind][1]
+
             while (start[i] - start[i - 1]) < 12 + work_hour_daily[i - 1]:
+                # print("start[i]  and start[i+1]", start[i], start[i-1] )
                 start[i] = np.random.randint(i * 24, (i + 1) * 24 - 1)
+                # start[i] = np.random.randint(i * 24 + demand_max_daily_ind[i]-work_hour_daily[i],\
+                #                          (i* 24)+demand_max_daily_ind[i] )
                 end[i] = start[i] + work_hour_daily[i]
-# this is cyclic schedule
-                if end[i] >168:
-                    start[i+1] = 0
-                    end[i+1] = end[i] - 168
-                    end[i]=168
+            if end[i] >168: # this is cyclic schedule
+                start[i+1] = 0
+                end[i+1] = end[i] - 168
+                end[i]=168
+
+    ## update under cover-- demand no change.
+    weekly_shift = np.array(list(zip(start, end)))
+
+    week_shift_binary=integer2binaryShift(weekly_shift)
+    under_cover_hourly -= week_shift_binary
+    under_cover_hourly_by_day = under_cover_hourly.reshape(7, 24)
+
+    return weekly_shift
 
 
-    return np.array(list(zip(start, end)))
-
-# for i in range(100):
-#     print(shift_generator())
+for i in range(10):
+    print(shift_generator())
 #
 # def part_time_8h(): # part_time_8h(time_8h)
 #     shift = np.zeros((7, shift_start_end), dtype=np.int)
