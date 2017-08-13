@@ -34,9 +34,9 @@ off_days_8h_parttime=5
 # hour_size=24*7
 
 #shift
-numWorkers = 27 #25
+numWorkers = 26 #25
 num_fulltime = 25# 23
-num_parttime= 2 #2
+num_parttime= 1 #2
 
 cost_fulltime= 20 #
 shift_start_end = 2  # have a start and a end integer each day
@@ -74,15 +74,16 @@ hourly_staff_handle=1
 
 under_cover_cost=400
 
+under_cover = 5
 over_cover = -50
-under_cover = 50
+
 # Genetic algorithm parameters
-popuSize =100# 200   5   10
+popuSize =50# 200   5   10
 probCross = 0.8 #0.8
 mutaSize = 1 #2
-probMutation = 0.2 # 0.2
+probMutation = 0.02 # 0.2
 numElitism = 20 #20    2    4
-maxIt =200 #300
+maxIt =300 #300
 
 #------ generate shift for each worker on weekly basis (0,7*24)
 
@@ -132,7 +133,7 @@ def shift_generator():
     first_day = np.argmax(work_random_binary)
 
     demand_max_daily_ind = np.argmax(under_cover_hourly_by_day, axis=1)
-    print("demand_max_daily_ind",demand_max_daily_ind)
+    # print("demand_max_daily_ind",demand_max_daily_ind)
 
     start_option= range(0, 24) # 24+1
     end_option = range(work_hour_daily[first_day],24+work_hour_daily[first_day]) # work_hour_daily[first_day]+1
@@ -226,8 +227,10 @@ def shift_generator():
     return weekly_shift
 
 
-for i in range(10):
-    print(shift_generator())
+# for i in range(10):
+#     a = shift_generator()
+#     computeFitness(a)
+
 #
 # def part_time_8h(): # part_time_8h(time_8h)
 #     shift = np.zeros((7, shift_start_end), dtype=np.int)
@@ -252,6 +255,11 @@ for i in range(10):
 # code
 def part_time_8h(): # part_time_8h(time_8h)
 
+    global under_cover_hourly
+    global under_cover_hourly_by_day
+    global demand_max_daily_ind
+
+
     shift = np.zeros((8, shift_start_end), dtype=np.int) #7
     hour_rand1 = np.random.choice(work_hours_options, p=weights)
     random1 = np.random.randint(hours_168 - 12 - hour_rand1-10)
@@ -269,8 +277,15 @@ def part_time_8h(): # part_time_8h(time_8h)
     random2_day = random2 // 24
 
     shift[random1_day], shift[random2_day] = [random1,random1+hour_rand1] , [random2,random2+hour_rand2]
+## update demand as well
+    weekly_shift = shift
+
+    week_shift_binary = integer2binaryShift(weekly_shift)
+    under_cover_hourly -= week_shift_binary
+    under_cover_hourly_by_day = under_cover_hourly.reshape(7, 24)
 
     return shift
+
 
 #
 #
@@ -393,8 +408,6 @@ def computeFitness(genInteger):
     under_cover_penalty = under_cover_cost * sum_under_cover
 
     total_cost = cost_worker_week + under_cover_penalty
-
-
     return np.int(total_cost)
 
 computeFitness(popuInteger[0,:,:])
@@ -452,6 +465,7 @@ auxPopuInteger = popuInteger
 # results_iter = np.zeros(maxIt,dtype=np.int)
 
 while it < maxIt:
+
     sortedIndexPopuFitness = np.argsort(popuFitness)  # low --> high
     # best_index_numElitism = popuSize - numElitism + 1 # shuai this is best # max value
     # auxPopuInteger[0:numElitism - 1, :, :] = popuInteger[sortedIndexPopuFitness[best_index_numElitism:], :, :]
@@ -478,7 +492,7 @@ while it < maxIt:
             # again append more solution to the pool.
 
 #REDO CROSSOVER:
-
+    #
     # numCrossPairs = np.random.binomial((popuSize - numElitism) / 2, probCross) # from old
     # worst_PopuFitness = np.max(popuFitness)
     # worst_PopuFitness_ind = np.argmax(popuFitness)
@@ -496,17 +510,17 @@ while it < maxIt:
     #     if kids1_best > worst_PopuFitness:
     #         # auxPopuInteger[numElitism+1,:,:] = cross1[kids1_best_ind]
     #         auxPopuInteger[numElitism + 2*k, :, :] = cross1[kids1_best_ind] # from old
-    #
 
 
 
 
-## Mutation old
-    # numMutation = np.random.binomial(popuSize,probMutation)
-    # # print numMutation #shuai
-    # indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
-    # for k in range (0,numMutation-1):
-    #        auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
+
+# Mutation old
+#     numMutation = np.random.binomial(popuSize,probMutation)
+#     # print numMutation #shuai
+#     indexToMutate = np.random.randint(numElitism,popuSize-1,numMutation)
+#     for k in range (0,numMutation-1):
+#            auxPopuInteger[indexToMutate[k],:,:] = mutation(auxPopuInteger[indexToMutate[k],:,:]);
 
 
 
