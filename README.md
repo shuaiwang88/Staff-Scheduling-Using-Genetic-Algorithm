@@ -11,3 +11,7 @@ All the daily schdule is randomly generated and you can modify to generate the s
 1. Add daily preference.
 2. Add temp worker with weekly total total time say [20,30]
 
+License
+-------
+
+MIT
