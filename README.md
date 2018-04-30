@@ -7,3 +7,7 @@ The time of each schedule is one of (6,8,10) and weekly working hour constraint 
 
 All the daily schdule is randomly generated and you can modify to generate the schedule according to your own problem.
 
+## todo
+1. Add daily preference.
+2. Add temperial worker with weekly total time say [20,30]
+
