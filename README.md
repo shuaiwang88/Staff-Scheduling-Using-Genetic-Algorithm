@@ -1,5 +1,7 @@
 # Staff_Scheduling_Genetic_Algroithm
-This solves weekly shift schduling problem using genetic algroithm.
+## objective:
+Minimize the staffing under coverage of each hour 
+
 
 The time frame is 24 * 7 + last hour of the last day schedule. And it is non-cyclic.
 
