@@ -1,5 +1,5 @@
 # Staff_Scheduling_Genetic_Algroithm
-## objective:
+Objective:
 Minimize the staffing under coverage of each hour 
 
 
